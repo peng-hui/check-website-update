@@ -1,6 +1,7 @@
 # Check updates on websites
 
 ## Preparation
+0. `pip install -r requirements.txt`
 To run the script, you need to provide the following files:
 1. `urls.txt` that specifies the urls you want to check. Each url starts a new line. You can use a sharp character to comment out specific urls.
 ```txt

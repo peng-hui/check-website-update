@@ -30,8 +30,9 @@ from difflib import SequenceMatcher, unified_diff
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
+from html_similarity import similarity, structural_similarity
 def similarity(str1, str2):
-    return SequenceMatcher(None, str1, str2).ratio()
+    return structural_similarity(str1, str2)
 
 def check_web(url, data_dir):
     try:
@@ -74,11 +75,11 @@ if __name__ == "__main__":
     parser.add_argument ('-t', '--threshold', type=float, required=True, help="Notificaton threshold in [0, 1].")
     args = parser.parse_args()
 
-    fileDir = pathlib.Path(__file__).parent.resolve()
-    data_dir = join(fileDir, "web-cache")
+    file_dir = pathlib.Path(__file__).parent.resolve()
+    data_dir = join(file_dir, "web-cache")
     if not exists(data_dir):
         os.mkdir(data_dir)
-    with open(join(fileDir, 'urls.txt'), 'r') as fp:
+    with open(join(file_dir, 'urls.txt'), 'r') as fp:
         urls = [i.strip() for i in fp.readlines() if not i.startswith('#')]
     diffs = []
     updatedUrls = []
@@ -91,15 +92,15 @@ if __name__ == "__main__":
             diffs.append(diff)
             updatedUrls.append(url)
 
-    content = "=====UPDATES ON=====\n" + "\t".join(updatedUrls) + "\n=====DETAILS=====\n".join(diffs)
+    content = "=====UPDATES ON=====\n" + "\t".join(updatedUrls) + "\n=====DETAILS=====\n" + "\n".join(diffs)
     if len(updatedUrls) > 0:
-        mail_info= open(join(data_dir, 'mail_info.txt')).readlines()
+        mail_info= open(join(file_dir, 'mail_info.txt')).readlines()
         _user = mail_info[0].strip()
         _password = mail_info[1].strip()
 
         to = [i.strip() for i in mail_info[2:]]
         subject = 'Web Service Sync'
-        ret = send_email(_user, _password, to, subject, content.encode('utf-8'))
+        ret = send_email(_user, _password, to, subject, content)
 
     if not exists(join(data_dir, 'web-check.log')):
         open(join(data_dir, 'web-check.log'), 'w').close()

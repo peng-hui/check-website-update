@@ -1,0 +1,2 @@
+html_similarity==0.3.3
+SocksiPy_branch==1.01
