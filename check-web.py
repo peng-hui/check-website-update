@@ -30,18 +30,18 @@ from difflib import SequenceMatcher, unified_diff
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
-from html_similarity import similarity, structural_similarity
+from html_similarity import structural_similarity
 def similarity(str1, str2):
     return structural_similarity(str1, str2)
 
 def check_web(url, data_dir):
     try:
-        req = Request(url=url, headers={'User-Agent':' Mozilla/5.0 (Windows NT 6.1; WOW64; rv:12.0) Gecko/20100101 Firefox/12.0'})
+        req = Request(url=url, headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'})
         req.add_header('Referer', url)
         with urlopen(req) as fp:
             new_content = fp.read().decode('utf-8')
             filePath = join(data_dir, quote(url, safe=''))
-            diff = False
+            diff = ''
             similar_score = 1.0
 
             if not exists(filePath):
@@ -49,13 +49,13 @@ def check_web(url, data_dir):
                 similar_score = 2
                 # check a new website, we do not append the diff
             else:
-                with open(filePath, 'r') as data_fp:
+                with open(filePath, 'r', encoding='utf-8') as data_fp:
                     old_content = data_fp.read()
-                    with open("%s.bak" % filePath, 'w') as backup_data_fp:
+                    with open("%s.bak" % filePath, 'w', encoding='utf-8') as backup_data_fp:
                         backup_data_fp.write(old_content)
                     similar_score = similarity(new_content, old_content)
                     diff = "\n".join(list(unified_diff(old_content.split('\n'), new_content.split('\n'))))
-            with open(filePath, 'w') as data_fp:
+            with open(filePath, 'w', encoding='utf-8') as data_fp:
                 # write latest version
                 data_fp.write(new_content)
             return diff, similar_score
@@ -63,7 +63,7 @@ def check_web(url, data_dir):
         print(e)
         pass
 
-    return False, 3
+    return '', 3
 
 from datetime import datetime, date
 import pathlib
@@ -73,6 +73,7 @@ import os
 if __name__ == "__main__":
     parser = argparse.ArgumentParser ()
     parser.add_argument ('-t', '--threshold', type=float, required=True, help="Notificaton threshold in [0, 1].")
+    parser.add_argument ('--mail', action='store_true', help="Alert check results over mails")
     args = parser.parse_args()
 
     file_dir = pathlib.Path(__file__).parent.resolve()
@@ -80,20 +81,22 @@ if __name__ == "__main__":
     if not exists(data_dir):
         os.mkdir(data_dir)
     with open(join(file_dir, 'urls.txt'), 'r') as fp:
-        urls = [i.strip() for i in fp.readlines() if not i.startswith('#')]
+        inputs = [i.strip() for i in fp.readlines() if not i.startswith('#')]
+        urls = [item.split()[0] for item in inputs]
+        titles = [item.split()[1] for item in inputs]
     diffs = []
     updatedUrls = []
     summary = ""
-    for url in urls:
+    for url, title in zip(urls, titles):
         diff, score = check_web(url, data_dir)
         summary += url + ": " + str(score) + "\n"
-        print('check %s, updated? %s, %f'% (url, 'False' if diff == False else 'True', score))
+        print('check %s, diff bytes %s, updated? (%f, %s)'% (title, str(len(diff)), score, str(1 - score > args.threshold)))
         if 1 - score > args.threshold: # there is significant diff above threshold
             diffs.append(diff)
             updatedUrls.append(url)
 
     content = "=====UPDATES ON=====\n" + "\t".join(updatedUrls) + "\n=====DETAILS=====\n" + "\n".join(diffs)
-    if len(updatedUrls) > 0:
+    if len(updatedUrls) > 0 and args.mail:
         mail_info= open(join(file_dir, 'mail_info.txt')).readlines()
         _user = mail_info[0].strip()
         _password = mail_info[1].strip()
