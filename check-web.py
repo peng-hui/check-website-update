@@ -34,13 +34,13 @@ from html_similarity import structural_similarity
 def similarity(str1, str2):
     return structural_similarity(str1, str2)
 
-def check_web(url, data_dir):
+def check_web(url, title, data_dir):
     try:
         req = Request(url=url, headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'})
         req.add_header('Referer', url)
         with urlopen(req) as fp:
             new_content = fp.read().decode('utf-8')
-            filePath = join(data_dir, quote(url, safe=''))
+            filePath = join(data_dir, title)
             diff = ''
             similar_score = 1.0
 
@@ -86,16 +86,30 @@ if __name__ == "__main__":
         titles = [item.split()[1] for item in inputs]
     diffs = []
     updatedUrls = []
+    updatedTitles = []
     summary = ""
     for url, title in zip(urls, titles):
-        diff, score = check_web(url, data_dir)
-        summary += url + ": " + str(score) + "\n"
+        diff, score = check_web(url, title, data_dir)
+        summary += url + " " + title  + ": " + str(score) + "\n"
         print('check %s, diff bytes %s, updated? (%f, %s)'% (title, str(len(diff)), score, str(1 - score > args.threshold)))
         if 1 - score > args.threshold: # there is significant diff above threshold
             diffs.append(diff)
             updatedUrls.append(url)
+            updatedTitles.append(title)
 
-    content = "=====UPDATES ON=====\n" + "\t".join(updatedUrls) + "\n=====DETAILS=====\n" + "\n".join(diffs)
+    content = "=====UPDATES ON=====\n" + "---site---\n".join([updatedTitles[i] + "\n" +  diffs[i] for i in range(len(diffs))]) + "\n"
+    if not exists(join(data_dir, 'web-check.log')):
+        open(join(data_dir, 'web-check.log'), 'w').close()
+
+    with open(join(data_dir, 'web-check.log'), 'r+') as fp:
+        today = date.today()
+        old_content = fp.read()
+        fp.seek(0)
+        fp.write("\n-------%s------\n" % today.strftime("%d/%m/%Y"))
+        fp.write(summary)
+        fp.write(content)
+        fp.write(old_content)
+
     if len(updatedUrls) > 0 and args.mail:
         mail_info= open(join(file_dir, 'mail_info.txt')).readlines()
         _user = mail_info[0].strip()
@@ -105,13 +119,3 @@ if __name__ == "__main__":
         subject = 'Web Service Sync'
         ret = send_email(_user, _password, to, subject, content)
 
-    if not exists(join(data_dir, 'web-check.log')):
-        open(join(data_dir, 'web-check.log'), 'w').close()
-    with open(join(data_dir, 'web-check.log'), 'r+') as fp:
-        today = date.today()
-        old_content = fp.read()
-        fp.seek(0)
-        fp.write("\n-------%s------\n" % today.strftime("%d/%m/%Y"))
-        fp.write(summary)
-        fp.write(content)
-        fp.write(old_content)
