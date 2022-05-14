@@ -18,8 +18,7 @@ recipient2@example.com
 Note that you might also need to change the corresponding SMTP server configuration for email notification, e.g., line 14.
 
 ## Run
-You can specify a threshold to selectively enabling email notification only when the update on a website is significant enough. The threshold is expected to be a float in the range of [0, 1]. There is an optional `mail` option.
 ```bash
-python3 check-web.py -t 0.01 --mail
+python3 check-web.py -t 0.9 --mail
 ```
 You can add above command to `crontab` to periodically check updates.

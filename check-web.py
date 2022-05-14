@@ -15,7 +15,7 @@ def send_email(user, pwd, recipient, subject, body):
         server.ehlo()
         server.starttls()
         server.login(user, pwd)
-        server.sendmail(FROM, TO, message)
+        server.sendmail(FROM, TO, message.encode('utf-8'))
         server.close()
         print ('successfully sent the mail')
         return True
@@ -91,8 +91,8 @@ if __name__ == "__main__":
     for url, title in zip(urls, titles):
         diff, score = check_web(url, title, data_dir)
         summary += url + " " + title  + ": " + str(score) + "\n"
-        print('check %s, diff bytes %s, updated? (%f, %s)'% (title, str(len(diff)), score, str(1 - score > args.threshold)))
-        if 1 - score > args.threshold: # there is significant diff above threshold
+        #print('check %s, diff bytes %s, updated? (%f, %s)'% (title, str(len(diff)), score, str(1 - score > args.threshold)))
+        if score < args.threshold: # similar-score below threshold
             diffs.append(diff)
             updatedUrls.append(url)
             updatedTitles.append(title)
